@@ -29,9 +29,9 @@ class Stop(smach.State):
         self.twist = Twist()
         self.cmd_vel_pub = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=1)
         self.prev_error = None
-        self.Kp = 1.0 / 200.0
-        self.Ki = 1.0 / 200.0
-        self.Kd = 1.0 / 200.0
+        self.Kp = 1.0 / 100.0
+        self.Ki = 1.0 / 100.0
+        self.Kd = 1.0 / 100.0
 
     def execute(self, userdata):
         global button_start
@@ -55,7 +55,7 @@ class Stop(smach.State):
                     error = cx - self.callbacks.w / 2
                     rotation = -(self.Kp * float(error) + self.Kd * (error - self.prev_error))
                     self.prev_error = error
-                self.twist.linear.x = 0.4
+                self.twist.linear.x = 0.8
                 self.twist.angular.z = rotation
                 self.cmd_vel_pub.publish(self.twist)
                 # END CONTROL
