@@ -197,6 +197,46 @@ class Callbacks:
         cv2.imshow("red window", red_mask)
         cv2.waitKey(3)
 
+class PID:
+    def __init__(self):
+        self.err = None
+        self.initTime = rospy.get_time()
+        self.cTime = None
+        self.duration = None
+        self.Kp = None
+        self.Ki = None
+        self.Kd = None
+        self.err = None
+        self.totalErr = 0
+        self.derv = None
+
+    def setConstants(self, Kp, Ki, Kd):
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        return
+
+    def calcPID(self, err):
+        self.cTime = rospy.get_time()
+        self.duration = cTime - self.initTime
+        self.initTime = self.cTime
+        self.err = err
+        return calcP() + calcI() + calcD()
+
+    def calcP(self):
+        return self.Kp * self.err
+
+    def calcI(self):
+        self.totalErr += self.err*self.duration
+        return self.Ki*self.totalErr
+
+    def calcD(self):
+        if not self.prevErr == None:
+            self.derv = float((self.err-self.prevErr)/self.duration)
+        else:
+            self.derv = 0
+        return self.Kd*self.derv
+
 
 def main():
     global button_start
