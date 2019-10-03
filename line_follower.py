@@ -21,6 +21,19 @@ from nav_msgs.msg import Odometry
 
 global shutdown_requested
 
+class JoyStop(smach.State):
+    def __init__ (self, callbacks):
+        smach.State.__init__(self, outcomes=['follow_line', 'done'])
+        self.callbacks = callbacks
+
+    def execute(self, userdata):
+        global button_start
+        global shutdown_requested
+        while not shutdown_requested:
+            if button_start:
+                return 'follow_line'
+            rospy.sleep(1)
+        return 'done'
 
 class Stop(smach.State):
     def __init__(self, callbacks):
@@ -146,6 +159,11 @@ class Callbacks:
     def odometry_callback(self, msg):
         return
 
+    def controller_callback(event):
+        global button_start
+        if event.buttons[1] == 1:
+            button_start = not button_start
+
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -191,11 +209,14 @@ def main():
     callbacks = Callbacks()
     image_sub = rospy.Subscriber('camera/rgb/image_raw', Image, callbacks.image_callback)
     odom_sub = rospy.Subscriber("odom", Odometry, callbacks.odometry_callback)
+    controller_sub = rospy.Subscriber('joy', Joy, controller_callback)
 
     # Create done outcome which will stop the state machine
     sm_turtle = smach.StateMachine(outcomes=['DONE'])
 
     with sm_turtle:
+        smach.StateMachine.add('JOYSTOP', JoyStop(callbacks),
+        transitions={'stop:' 'STOP', 'follow_line': 'FOLLOW_LINE'})
         smach.StateMachine.add('FOLLOW_LINE', FollowLine(callbacks),
                                transitions={'stop': 'STOP', 'done': 'DONE'})
         smach.StateMachine.add('STOP', Stop(callbacks),
