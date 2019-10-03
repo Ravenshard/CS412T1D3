@@ -29,15 +29,16 @@ class Stop(smach.State):
         self.twist = Twist()
         self.cmd_vel_pub = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=1)
         self.prev_error = None
-        self.Kp = 1.0 / 100.0
-        self.Ki = 1.0 / 100.0
-        self.Kd = 1.0 / 100.0
+        self.Kp = 1.0 / 50.0
+        self.Ki = 1.0 / 50.0
+        self.Kd = 1.0 / 50.0
+        self.speed = 0.8
 
     def execute(self, userdata):
         global button_start
         global shutdown_requested
         start = time.time()
-        while time.time() - start < 1:
+        while time.time() - start < 0.5:
             if shutdown_requested:
                 return 'done'
             white_mask = self.callbacks.white_mask
@@ -55,7 +56,7 @@ class Stop(smach.State):
                     error = cx - self.callbacks.w / 2
                     rotation = -(self.Kp * float(error) + self.Kd * (error - self.prev_error))
                     self.prev_error = error
-                self.twist.linear.x = 0.8
+                self.twist.linear.x = self.speed
                 self.twist.angular.z = rotation
                 self.cmd_vel_pub.publish(self.twist)
                 # END CONTROL
@@ -77,9 +78,10 @@ class FollowLine(smach.State):
         smach.State.__init__(self, outcomes=['stop', 'done'])
         self.callbacks = callbacks
         self.prev_error = None
-        self.Kp = 1.0 / 200.0
-        self.Ki = 1.0 / 200.0
-        self.Kd = 1.0 / 200.0
+        self.Kp = 1.0 / 50.0
+        self.Ki = 1.0 / 50.0
+        self.Kd = 1.0 / 50.0
+        self.speed = 0.8
         self.twist = Twist()
         self.cmd_vel_pub = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=1)
 
@@ -108,7 +110,7 @@ class FollowLine(smach.State):
                         error = cx - self.callbacks.w / 2
                         rotation = -(self.Kp * float(error) + self.Kd * (error - self.prev_error))
                         self.prev_error = error
-                    self.twist.linear.x = 0.4
+                    self.twist.linear.x = self.speed
                     self.twist.angular.z = rotation
                     self.cmd_vel_pub.publish(self.twist)
                     # END CONTROL
