@@ -28,19 +28,38 @@ class Stop(smach.State):
         self.callbacks = callbacks
         self.twist = Twist()
         self.cmd_vel_pub = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=1)
+        self.prev_error = None
+        self.Kp = 1.0 / 200.0
+        self.Ki = 1.0 / 200.0
+        self.Kd = 1.0 / 200.0
 
     def execute(self, userdata):
         global button_start
         global shutdown_requested
         start = time.time()
-        print("Moving")
-        while time.time() - start < 1.5:
+        while time.time() - start < 1:
             if shutdown_requested:
                 return 'done'
-            self.twist.linear.x = 0.4
-            self.cmd_vel_pub.publish(self.twist)
+            white_mask = self.callbacks.white_mask
 
-        print("Stopping")
+            M = cv2.moments(white_mask)
+            if M['m00'] > 0:
+                cx = int(M['m10'] / M['m00'])
+                cy = int(M['m01'] / M['m00'])
+                # BEGIN CONTROL
+                if self.prev_error is None:
+                    error = cx - self.callbacks.w / 2
+                    rotation = -(self.Kp * float(error))
+                    self.prev_error = error
+                else:
+                    error = cx - self.callbacks.w / 2
+                    rotation = -(self.Kp * float(error) + self.Kd * (error - self.prev_error))
+                    self.prev_error = error
+                self.twist.linear.x = 0.4
+                self.twist.angular.z = rotation
+                self.cmd_vel_pub.publish(self.twist)
+                # END CONTROL
+
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
 
